@@ -8,11 +8,11 @@ function u8tohex (arr) {
   return ret
 }
 
-window.addEventListener('load', function (receiver) {
+window.addEventListener('load', function (receiverUrl) {
   var idBytes = new Uint8Array(16)
   crypto.getRandomValues(idBytes)
   var id = u8tohex(idBytes)
-  var receiver = receiver.replace(/:id/, id)
+  var receiver = receiverUrl.replace(/:id/, id)
 
   if (window.monetize) {
     window.monetize({

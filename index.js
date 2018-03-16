@@ -16,7 +16,7 @@ class KoaWebMonetization {
     await this.plugin.connect()
 
     this.receiver = await createReceiver({
-      plugin,
+      plugin: this.plugin,
       paymentHandler: async params => {
         const amount = params.prepare.amount
         const id = params.prepare.destination.split('.').slice(-3)[0]
@@ -53,9 +53,9 @@ class KoaWebMonetization {
 
     if (balance < price) {
       throw new Error('insufficient balance on id.' +
-        ' id=' + id,
-        ' price=' + price,
-        ' balance=' + balance)
+      ' id=' + id,
+      ' price=' + price,
+      ' balance=' + balance)
     }
 
     this.buckets.set(id, balance - price)
@@ -65,7 +65,7 @@ class KoaWebMonetization {
     return async ctx => {
       const id = ctx.params.id
       if (!id) {
-        return ctx.throw(400, 'ctx.params.id must be defined') 
+        return ctx.throw(400, 'ctx.params.id must be defined')
       }
 
       const _price = (typeof price === 'function')
@@ -77,7 +77,7 @@ class KoaWebMonetization {
       }
 
       try {
-        spend(id, _price)
+        this.spend(id, _price)
       } catch (e) {
         return ctx.throw(402, e.message)
       }
@@ -108,3 +108,5 @@ class KoaWebMonetization {
     }
   }
 }
+
+module.exports = KoaWebMonetization
