@@ -1,6 +1,7 @@
 const { createReceiver } = require('ilp-protocol-psk2')
 const EventEmitter = require('events')
 const getIlpPlugin = require('ilp-plugin')
+const debug = require('debug')('koa-web-monetization')
 
 class KoaWebMonetization {
   constructor (opts) {
@@ -27,7 +28,7 @@ class KoaWebMonetization {
         balance = Math.min(balance + Number(amount), this.maxBalance)
         this.buckets.set(id, balance)
         setImmediate(() => this.balanceEvents.emit(id, balance))
-        console.log('got money for bucket. amount=' + amount,
+        debug('got money for bucket. amount=' + amount,
           'id=' + id,
           'balance=' + balance)
 
@@ -37,11 +38,10 @@ class KoaWebMonetization {
   }
 
   awaitBalance (id, balance) {
+    debug('awaiting balance. id=' + id, 'balance=' + balance)
     return new Promise(resolve => {
       const handleBalanceUpdate = _balance => {
-        console.log('balance of', _balance)
         if (_balance < balance) return
-        console.log('done')
 
         setImmediate(() =>
           this.balanceEvents.removeListener(id, handleBalanceUpdate))
@@ -62,6 +62,7 @@ class KoaWebMonetization {
       ' balance=' + balance)
     }
 
+    debug('spent money. id=' + id, 'price=' + price)
     this.buckets.set(id, balance - price)
   }
 
@@ -77,10 +78,8 @@ class KoaWebMonetization {
         : Number(price)
 
       if (awaitBalance) {
-        console.log('awaiting balance')
         await this.awaitBalance(id, _price)
       }
-      console.log('finished')
 
       try {
         this.spend(id, _price)
