@@ -47,19 +47,19 @@ class WebMonetizationAccountant {
     this.buckets.set(id, balance - price)
   }
 
-  paid (_price) {
+  paid ({ price }) {
     return async ctx => {
       const id = ctx.params.id
       if (!id) {
         return ctx.throw(400, 'ctx.params.id must be defined') 
       }
 
-      const price = (typeof _price === 'function')
-        ? Number(_price(ctx))
-        : Number(_price)
+      const _price = (typeof price === 'function')
+        ? Number(price(ctx))
+        : Number(price)
 
       try {
-        spend(id, price)    
+        spend(id, _price)    
       } catch (e) {
         return ctx.throw(402, e.message)
       }
