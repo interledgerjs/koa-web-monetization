@@ -1,0 +1,23 @@
+<html>
+<head>
+</head>
+<body>
+  <h1>Hello World</h1>
+  <p>Underneath this is a paid image. It will load if you have web monetization on.</p>
+  <div id="container">
+    <!-- Paid image will be appended here -->
+  </div>
+  <script src="/client.js"></script>
+  <script>
+    getMonetizationId('http://localhost:8080/pay/:id')
+      .then(id => {
+        var img = document.createElement('img')
+        var container = document.getElementById('container')
+
+        img.src = '/content/' + id
+        img.width = '600'
+        container.appendChild(img)
+      })
+  </script>
+</body>
+</html>
