@@ -6,7 +6,7 @@ const Koa = require('koa')
 const app = new Koa()
 
 const router = require('koa-router')()
-const Accountant = require('ilp-web-monetization-accountant')
+const Accountant = require('web-monetization-accountant')
 const accountant = new Accountant()
 
 // This is the SPSP endpoint that lets you receive ILP payments.  Money that
