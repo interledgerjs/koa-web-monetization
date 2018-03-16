@@ -6,7 +6,7 @@
 - [Try it Out](#try-it-out)
   - [Prerequisites](#prerequisites)
   - [Install and Run](#install-and-run)
-- [API Docs](#api)
+- [API Docs](#api-docs)
   - [Constructor](#constructor)
   - [Receiver](#receiver)
   - [Paid](#paid)
