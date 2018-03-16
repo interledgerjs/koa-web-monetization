@@ -8,6 +8,7 @@ class KoaWebMonetization {
     this.plugin = (opts && opts.plugin) || getIlpPlugin()
     this.buckets = new Map()
     this.balanceEvents = new EventEmitter()
+    this.maxBalance = (opts && opts.maxBalance) || Infinity
   }
 
   async connect () {
@@ -22,7 +23,7 @@ class KoaWebMonetization {
         const id = params.prepare.destination.split('.').slice(-3)[0]
 
         let balance = this.buckets.get(id) || 0
-        balance += Number(amount) * 5000
+        balance = Math.min(balance + Number(amount) * 5000, this.maxBalance)
         this.buckets.set(id, balance)
         setImmediate(() => this.balanceEvents.emit(id, balance))
         console.log('got money for bucket. amount=' + amount,
