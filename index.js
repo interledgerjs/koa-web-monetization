@@ -13,6 +13,7 @@ class KoaWebMonetization {
 
   async connect () {
     if (this.connected) return
+    this.connected = true
 
     await this.plugin.connect()
 
@@ -23,7 +24,7 @@ class KoaWebMonetization {
         const id = params.prepare.destination.split('.').slice(-3)[0]
 
         let balance = this.buckets.get(id) || 0
-        balance = Math.min(balance + Number(amount) * 5000, this.maxBalance)
+        balance = Math.min(balance + Number(amount), this.maxBalance)
         this.buckets.set(id, balance)
         setImmediate(() => this.balanceEvents.emit(id, balance))
         console.log('got money for bucket. amount=' + amount,
@@ -38,10 +39,12 @@ class KoaWebMonetization {
   awaitBalance (id, balance) {
     return new Promise(resolve => {
       const handleBalanceUpdate = _balance => {
+        console.log('balance of', _balance)
         if (_balance < balance) return
+        console.log('done')
 
         setImmediate(() =>
-          this.balanceEvents.removeListener(handleBalanceUpdate))
+          this.balanceEvents.removeListener(id, handleBalanceUpdate))
         resolve()
       }
 
@@ -63,7 +66,7 @@ class KoaWebMonetization {
   }
 
   paid ({ price, awaitBalance = false }) {
-    return async ctx => {
+    return async (ctx, next) => {
       const id = ctx.params.id
       if (!id) {
         return ctx.throw(400, 'ctx.params.id must be defined')
@@ -74,11 +77,14 @@ class KoaWebMonetization {
         : Number(price)
 
       if (awaitBalance) {
+        console.log('awaiting balance')
         await this.awaitBalance(id, _price)
       }
+      console.log('finished')
 
       try {
         this.spend(id, _price)
+        return next()
       } catch (e) {
         return ctx.throw(402, e.message)
       }
