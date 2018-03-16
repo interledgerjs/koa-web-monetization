@@ -2,7 +2,7 @@ const { createReceiver } = require('ilp-protocol-psk2')
 const EventEmitter = require('events')
 const getIlpPlugin = require('ilp-plugin')
 
-class WebMonetizationAccountant {
+class KoaWebMonetization {
   constructor (opts) {
     this.connected = false
     this.plugin = (opts && opts.plugin) || getIlpPlugin()
