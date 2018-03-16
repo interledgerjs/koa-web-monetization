@@ -34,6 +34,20 @@ class KoaWebMonetization {
     })
   }
 
+  awaitBalance (id, balance) {
+    return new Promise(resolve => {
+      const handleBalanceUpdate = _balance => {
+        if (_balance < balance) return
+
+        setImmediate(() =>
+          this.balanceEvents.removeListener(handleBalanceUpdate))
+        resolve()
+      }
+
+      this.balanceEvents.on(id, handleBalanceUpdate)
+    })
+  }
+
   spend (id, price) {
     const balance = this.buckets.get(id)
 
@@ -47,7 +61,7 @@ class KoaWebMonetization {
     this.buckets.set(id, balance - price)
   }
 
-  paid ({ price }) {
+  paid ({ price, awaitBalance = false }) {
     return async ctx => {
       const id = ctx.params.id
       if (!id) {
@@ -58,8 +72,12 @@ class KoaWebMonetization {
         ? Number(price(ctx))
         : Number(price)
 
+      if (awaitBalance) {
+        await this.awaitBalance(id, _price)
+      }
+
       try {
-        spend(id, _price)    
+        spend(id, _price)
       } catch (e) {
         return ctx.throw(402, e.message)
       }

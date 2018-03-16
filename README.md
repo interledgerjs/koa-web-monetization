@@ -14,7 +14,9 @@ const monetization = new WebMonetization()
 router.get('/pay/:id', monetization.receiver())
 
 // This endpoint charges 100 units to the user with :id
-router.get('/content/:id/:content_id/', monetization.paid({ price: 100 }), async ctx => {
+// If awaitBalance is set to true, the call will stay open until the balance is sufficient. This is convenient
+// for making sure that the call doesn't immediately fail when called on startup.
+router.get('/content/:id/:content_id/', monetization.paid({ price: 100, awaitBalance: true }), async ctx => {
   // load content by :content_id
 })
 

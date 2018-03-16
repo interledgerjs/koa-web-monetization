@@ -8,19 +8,19 @@ function u8tohex (arr) {
   return ret
 }
 
-window.onload = function (receiver) {
+window.addEventListener('load', function (receiver) {
   var idBytes = new Uint8Array(16)
   crypto.getRandomValues(idBytes)
   var id = u8tohex(idBytes)
   var receiver = receiver.replace(/:id/, id)
 
   if (window.monetize) {
-    return window.monetize({
+    window.monetize({
       receiver
     })
   } else {
     console.log('Your extension is disabled or not installed.' +
       ' Manually pay to ' + receiver)
-    return Promise.reject(new Error('web monetization is not enabled'))
+    Promise.reject(new Error('web monetization is not enabled'))
   }
-}
+})
