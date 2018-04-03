@@ -53,7 +53,7 @@ class KoaWebMonetization {
   }
 
   spend (id, price) {
-    const balance = this.buckets.get(id)
+    const balance = this.buckets.get(id) || 0
 
     if (balance < price) {
       throw new Error('insufficient balance on id.' +
