@@ -27,6 +27,7 @@ class KoaWebMonetization {
     this.server.on('connection', conn => {
       const id = conn.connectionTag
       conn.on('money_stream', stream => {
+        stream.setReceiveMax(Infinity)
         stream.on('incoming', amount => {
           let balance = this.buckets.get(id) || 0
           balance = Math.min(balance + Number(amount), this.maxBalance)
@@ -38,6 +39,8 @@ class KoaWebMonetization {
         })
       })
     })
+
+    await this.server.listen()
   }
 
   awaitBalance (id, balance) {
@@ -102,7 +105,7 @@ class KoaWebMonetization {
       }
 
       const { destinationAccount, sharedSecret } =
-        this.receiver.generateAddressAndSecret(ctx.params.id)
+        this.server.generateAddressAndSecret(ctx.params.id)
 
       ctx.set('Content-Type', 'application/spsp+json')
       ctx.body = {
