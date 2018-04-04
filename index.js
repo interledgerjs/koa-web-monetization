@@ -1,4 +1,5 @@
-const { createReceiver } = require('ilp-protocol-psk2')
+const IlpStream = require('ilp-protocol-stream')
+const crypto = require('crypto')
 const EventEmitter = require('events')
 const getIlpPlugin = require('ilp-plugin')
 const debug = require('debug')('koa-web-monetization')
@@ -18,22 +19,24 @@ class KoaWebMonetization {
 
     await this.plugin.connect()
 
-    this.receiver = await createReceiver({
+    this.server = new IlpStream.Server({
       plugin: this.plugin,
-      paymentHandler: async params => {
-        const amount = params.prepare.amount
-        const id = params.prepare.destination.split('.').slice(-3)[0]
+      serverSecret: crypto.randomBytes(32)
+    })
 
-        let balance = this.buckets.get(id) || 0
-        balance = Math.min(balance + Number(amount), this.maxBalance)
-        this.buckets.set(id, balance)
-        setImmediate(() => this.balanceEvents.emit(id, balance))
-        debug('got money for bucket. amount=' + amount,
-          'id=' + id,
-          'balance=' + balance)
-
-        await params.acceptSingleChunk()
-      }
+    this.server.on('connection', conn => {
+      const id = conn.connectionTag
+      conn.on('money_stream', stream => {
+        stream.on('incoming', amount => {
+          let balance = this.buckets.get(id) || 0
+          balance = Math.min(balance + Number(amount), this.maxBalance)
+          this.buckets.set(id, balance)
+          setImmediate(() => this.balanceEvents.emit(id, balance))
+          debug('got money for bucket. amount=' + amount,
+            'id=' + id,
+            'balance=' + balance)
+        })
+      })
     })
   }
 
@@ -99,16 +102,11 @@ class KoaWebMonetization {
       }
 
       const { destinationAccount, sharedSecret } =
-        this.receiver.generateAddressAndSecret()
-
-      const segments = destinationAccount.split('.')
-      const resultAccount = segments.slice(0, -2).join('.') +
-        '.' + ctx.params.id +
-        '.' + segments.slice(-2).join('.')
+        this.receiver.generateAddressAndSecret(ctx.params.id)
 
       ctx.set('Content-Type', 'application/spsp+json')
       ctx.body = {
-        destination_account: resultAccount,
+        destination_account: destinationAccount,
         shared_secret: sharedSecret.toString('base64')
       }
     }
