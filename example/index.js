@@ -2,14 +2,18 @@ const path = require('path')
 const fs = require('fs-extra')
 const Koa = require('koa')
 const app = new Koa()
-
+const compose = require('koa-compose')
 const router = require('koa-router')()
-const WebMonetization = require('..')
-const monetization = new WebMonetization()
+const { WebMonetizationMiddleWare, KoaWebMonetization } = require('..')
+const monetizer = new KoaWebMonetization()
 
-router.get('/pay/:id', monetization.receiver())
+// const monetization = new WebMonetization()
+router.get(monetizer.receiverEndpointUrl, monetizer.receive.bind(monetizer))
 
-router.get('/content/:id', monetization.paid({ price: 100, awaitBalance: true }), async ctx => {
+router.get('/content/', async ctx => {
+  await monetizer.awaitBalance(ctx.cookies.get(monetizer.cookieName), 100)
+  monetizer.spend(ctx.cookies.get(monetizer.cookieName), 100)
+
   ctx.body = await fs.readFile(path.resolve(__dirname, 'example.png'))
 })
 
@@ -23,6 +27,7 @@ router.get('/', async ctx => {
 })
 
 app
+  .use(compose([WebMonetizationMiddleWare(monetizer), router.middleware()]))
   .use(router.routes())
   .use(router.allowedMethods())
   .listen(8080)

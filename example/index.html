@@ -9,14 +9,17 @@
   </div>
   <script src="/client.js"></script>
   <script>
-    getMonetizationId('http://localhost:8080/pay/:id')
-      .then(id => {
+    var monetizerClient = new MonetizerClient();
+    monetizerClient.start()
+      .then(function() {
         var img = document.createElement('img')
         var container = document.getElementById('container')
-
-        img.src = '/content/' + id
+        img.src = '/content/'
         img.width = '600'
         container.appendChild(img)
+      })
+      .catch(function(error){
+        console.log("Error", error);
       })
   </script>
 </body>

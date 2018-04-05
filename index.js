@@ -2,6 +2,7 @@ const { createReceiver } = require('ilp-protocol-psk2')
 const EventEmitter = require('events')
 const getIlpPlugin = require('ilp-plugin')
 const debug = require('debug')('koa-web-monetization')
+const { randomBytes } = require('crypto')
 
 class KoaWebMonetization {
   constructor (opts) {
@@ -10,12 +11,30 @@ class KoaWebMonetization {
     this.buckets = new Map()
     this.balanceEvents = new EventEmitter()
     this.maxBalance = (opts && opts.maxBalance) || Infinity
+    this.cookieName = (opts && opts.cookieName) || '__monetizer'
+    this.cookieOptions = {
+      httpOnly: false
+    }
+    if (opts && opts.cookieOptions) {
+      this.cookieOptions = Object.assign(opts.cookieOptions, this.cookieOptions)
+    }
+    this.receiverEndpointUrl = (opts && opts.receiverEndpointUrl) || '/__monetizer/:id'
+  }
+
+  generatePayerId (ctx) {
+    // Check for cookie in request otherwise generate newId.
+    const cookie = ctx.cookies.get(this.cookieName)
+    if (cookie) {
+      return cookie
+    }
+    // ctx.cookies.set(this.cookieName, randomBytes(16).toString('hex'))
+    // return next()
+    return randomBytes(16).toString('hex')
   }
 
   async connect () {
     if (this.connected) return
     this.connected = true
-
     await this.plugin.connect()
 
     this.receiver = await createReceiver({
@@ -66,53 +85,40 @@ class KoaWebMonetization {
     this.buckets.set(id, balance - price)
   }
 
-  paid ({ price, awaitBalance = false }) {
-    return async (ctx, next) => {
-      const id = ctx.params.id
-      if (!id) {
-        return ctx.throw(400, 'ctx.params.id must be defined')
-      }
+  async receive (ctx) {
+    await this.connect()
 
-      const _price = (typeof price === 'function')
-        ? Number(price(ctx))
-        : Number(price)
-
-      if (awaitBalance) {
-        await this.awaitBalance(id, _price)
-      }
-
-      try {
-        this.spend(id, _price)
-        return next()
-      } catch (e) {
-        return ctx.throw(402, e.message)
-      }
+    if (ctx.get('Accept').indexOf('application/spsp+json') === -1) {
+      return ctx.throw(404)
     }
-  }
 
-  receiver () {
-    return async ctx => {
-      await this.connect()
+    const { destinationAccount, sharedSecret } =
+      this.receiver.generateAddressAndSecret()
 
-      if (ctx.get('Accept').indexOf('application/spsp+json') === -1) {
-        return ctx.throw(404)
-      }
+    const segments = destinationAccount.split('.')
+    const resultAccount = segments.slice(0, -2).join('.') +
+      '.' + ctx.params.id +
+      '.' + segments.slice(-2).join('.')
 
-      const { destinationAccount, sharedSecret } =
-        this.receiver.generateAddressAndSecret()
-
-      const segments = destinationAccount.split('.')
-      const resultAccount = segments.slice(0, -2).join('.') +
-        '.' + ctx.params.id +
-        '.' + segments.slice(-2).join('.')
-
-      ctx.set('Content-Type', 'application/spsp+json')
-      ctx.body = {
-        destination_account: resultAccount,
-        shared_secret: sharedSecret.toString('base64')
-      }
+    ctx.set('Content-Type', 'application/spsp+json')
+    ctx.body = {
+      destination_account: resultAccount,
+      shared_secret: sharedSecret.toString('base64')
     }
   }
 }
 
-module.exports = KoaWebMonetization
+const WebMonetizationMiddleWare = (monetizer) => {
+  return async (ctx, next) => {
+    // ctx.state.awaitBalance = monetizer.awaitBalance
+    // ctx.state.spend = monetizer.spend
+    //
+    ctx.cookies.set(monetizer.cookieName, monetizer.generatePayerId(ctx), monetizer.cookieOptions)
+    return next()
+  }
+}
+
+module.exports = {
+  WebMonetizationMiddleWare,
+  KoaWebMonetization
+}
