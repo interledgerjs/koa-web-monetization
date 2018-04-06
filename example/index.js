@@ -7,13 +7,11 @@ const router = require('koa-router')()
 const { WebMonetizationMiddleWare, KoaWebMonetization } = require('..')
 const monetizer = new KoaWebMonetization()
 
-// const monetization = new WebMonetization()
 router.get(monetizer.receiverEndpointUrl, monetizer.receive.bind(monetizer))
 
 router.get('/content/', async ctx => {
-  await monetizer.awaitBalance(ctx.cookies.get(monetizer.cookieName), 100)
-  monetizer.spend(ctx.cookies.get(monetizer.cookieName), 100)
-
+  await ctx.state.awaitBalance(100)
+  ctx.state.spend(100)
   ctx.body = await fs.readFile(path.resolve(__dirname, 'example.png'))
 })
 

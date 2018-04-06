@@ -27,8 +27,6 @@ class KoaWebMonetization {
     if (cookie) {
       return cookie
     }
-    // ctx.cookies.set(this.cookieName, randomBytes(16).toString('hex'))
-    // return next()
     return randomBytes(16).toString('hex')
   }
 
@@ -73,7 +71,6 @@ class KoaWebMonetization {
 
   spend (id, price) {
     const balance = this.buckets.get(id) || 0
-
     if (balance < price) {
       throw new Error('insufficient balance on id.' +
       ' id=' + id,
@@ -110,9 +107,13 @@ class KoaWebMonetization {
 
 const WebMonetizationMiddleWare = (monetizer) => {
   return async (ctx, next) => {
-    // ctx.state.awaitBalance = monetizer.awaitBalance
-    // ctx.state.spend = monetizer.spend
-    //
+    ;['awaitBalance', 'spend'].forEach(key => {
+      ctx.state[key] = (amount) => {
+        monetizer[key] = monetizer[key].bind(monetizer)
+        return monetizer[key](ctx.cookies.get(monetizer.cookieName), amount)
+      }
+      ctx.state[key] = ctx.state[key].bind(monetizer)
+    })
     ctx.cookies.set(monetizer.cookieName, monetizer.generatePayerId(ctx), monetizer.cookieOptions)
     return next()
   }
