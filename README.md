@@ -21,7 +21,7 @@ to unlock exclusive content or paywalls.
 
 `koa-web-monetization` makes this easy by providing middleware for your
 [Koa](http://koajs.com/) application. Charging your users is as easy as putting
-`monetization.paid({ price: 100 })` in front of it. No need to convince them to
+`ctx.state.spend(100)` in your route handler. No need to convince them to
 buy a subscription or donate.
 
 ## Example Code
@@ -68,15 +68,18 @@ The client side code to support this is very simple too:
 ```html
 <script src="node_modules/koa-web-monetization/client.js"></script>
 <script>
-  getMonetizationId('http://localhost:8080/pay/:id')
-    .then(id => {
-      var img = document.createElement('img')
-      var container = document.getElementById('container')
-
-      img.src = '/content/' + id
-      img.width = '600'
-      container.appendChild(img)
-    })
+  var monetizerClient = new MonetizerClient();
+  monetizerClient.start()
+  .then(function() {
+    var img = document.createElement('img')
+    var container = document.getElementById('container')
+    img.src = '/content/'
+    img.width = '600'
+    container.appendChild(img)
+  })
+  .catch(function(error){
+    console.log("Error", error);
+  })
 </script>
 ```
 
