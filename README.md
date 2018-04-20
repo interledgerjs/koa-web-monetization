@@ -37,7 +37,7 @@ const app = new Koa()
 const router = require('koa-router')()
 const { WebMonetizationMiddleWare, KoaWebMonetization } = require('koa-web-monetization')
 const monetizer = new KoaWebMonetization()
-
+const EXPRESS_WEB_MONETIZATION_CLIENT_PATH =  '/node_modules/express-web-monetization/client.js'
 // This is the SPSP endpoint that lets you receive ILP payments.  Money that
 // comes in is associated with the :id
 router.get(monetizer.receiverEndpointUrl, monetizer.receive.bind(monetizer))
@@ -56,6 +56,9 @@ router.get('/', async ctx => {
   // load index page
 })
 
+router.get('/scripts/client.js', async ctx => {
+  ctx.body = await fs.readFile(path.join(__dirname, EXPRESS_WEB_MONETIZATION_CLIENT_PATH);
+}
 app
   .use(compose([WebMonetizationMiddleWare(monetizer), router.middleware()]))
   .use(router.routes())
@@ -66,7 +69,7 @@ app
 The client side code to support this is very simple too:
 
 ```html
-<script src="node_modules/koa-web-monetization/client.js"></script>
+<script src="/scripts/client.js"></script>
 <script>
   var monetizerClient = new MonetizerClient();
   monetizerClient.start()
@@ -127,7 +130,7 @@ Create a new `KoaWebMonetization` instance.
 
 - `opts.plugin` - Supply an ILP plugin. Defaults to using Moneyd.
 - `opts.maxBalance` - The maximum balance that can be associated with any user. Defaults to `Infinity`.
-- `opts.receiveEndpointUrl` - The endpoint in your Hapi route configuration that specifies where a user pays streams PSK packets to your site. Defaults to `/__monetizer/{id}` where `{id}` is the server generated ID (stored in the browser as a cookie).
+- `opts.receiveEndpointUrl` - The endpoint in your Koa route configuration that specifies where a user pays streams PSK packets to your site. Defaults to `/__monetizer/{id}` where `{id}` is the server generated ID (stored in the browser as a cookie).
 - `opts.cookieName` - The cookie key name for your server generated payer ID. Defaults to `__monetizer`.
 - `opts.cookieOptions` - Cookie configurations for Koa. See [Koa ctx setting cookies options](http://koajs.com/) for more details! Only defaults are `httpOnly: false`
 ### Receiver
@@ -147,7 +150,7 @@ new MonetizerClient(opts: Object | void): MonetizerClient
 ```
 Creates a new `MonetizerClient` instance.
 
-- `opts.url` - The url of the server that is registering the HapiWebMonetization plugin. Defaults to `new URL(window.location).origin`
+- `opts.url` - The url of the server that is registering the KoaWebMonetization plugin. Defaults to `new URL(window.location).origin`
 - `opts.cookieName` - The cookie key name that will be saved in your browser. Defaults to `__monetizer`. This MUST be the same has `opts.cookieName` in the server configuration.
 - `opts.receiverUrl` - The endpoint where users of the site can start streaming packets via their browser extension or through the browser API. Defaults to `opts.url + '__monetizer/:id'` where id is the server generated payer ID. This MUST be the same has `opts.receiverEndpointUrl` in the server configuration.
 
