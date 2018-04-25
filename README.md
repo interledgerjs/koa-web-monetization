@@ -65,20 +65,19 @@ app
 The client side code to support this is very simple too:
 
 ```html
+<body>
+  <h1>Hello World</h1>
+  <p>Underneath this is a paid image. It will load if you have web monetization on.</p>
+  <div id="container">
+    <!-- Paid image will be appended here -->
+  <img src="/content" width="600"/>
+  </div>
+
+</body>
 <script src="/client.js"></script>
 <script>
   var monetizerClient = new MonetizerClient();
   monetizerClient.start()
-  .then(function() {
-    var img = document.createElement('img')
-    var container = document.getElementById('container')
-    img.src = '/content/'
-    img.width = '600'
-    container.appendChild(img)
-  })
-  .catch(function(error){
-    console.log("Error", error);
-  })
 </script>
 ```
 

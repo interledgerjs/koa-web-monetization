@@ -13,29 +13,16 @@ function MonetizerClient (opts) {
     return match[1]
   }
 
-  this.start = function () {
+  this.start = async function () {
     const id = this.getMonetizationId()
-
-    return new Promise((resolve, reject) => {
-      if (document.readyState !== 'complete') {
-        document.addEventListener('readystatechange', event => {
-          this.start(id)
-            .then(resolve)
-        })
-        return
-      }
-
-      const receiverUrl = this.receiverUrl.replace(':id', id)
-      if (window.monetize) {
-        window.monetize({
-          receiver: receiverUrl
-        })
-        resolve(id)
-      } else {
-        console.log('Your extension is disabled or not installed.' +
-          ' Manually pay to ' + this.receiverUrl)
-        reject(new Error('web monetization is not enabled'))
-      }
-    })
+    const receiverUrl = this.receiverUrl.replace(':id', id)
+    if (window.monetize) {
+      window.monetize({
+        receiver: receiverUrl
+      })
+    } else {
+      console.log('Your extension is disabled or not installed.' +
+        ' Manually pay to ' + this.receiverUrl)
+    }
   }
 }
