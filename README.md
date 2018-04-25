@@ -35,7 +35,7 @@ const Koa = require('koa')
 const app = new Koa()
 const compose = require('koa-compose')
 const router = require('koa-router')()
-const { WebMonetizationMiddleWare, KoaWebMonetization } = require('koa-web-monetization')
+const KoaWebMonetization = require('koa-web-monetization')
 const monetizer = new KoaWebMonetization()
 
 // This endpoint charges 100 units to the user with :id
