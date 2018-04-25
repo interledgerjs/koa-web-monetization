@@ -3,6 +3,7 @@ const EventEmitter = require('events')
 const getIlpPlugin = require('ilp-plugin')
 const debug = require('debug')('koa-web-monetization')
 const { randomBytes } = require('crypto')
+const pathToRegexp = require('path-to-regexp')
 
 class KoaWebMonetization {
   constructor (opts) {
@@ -40,7 +41,6 @@ class KoaWebMonetization {
       paymentHandler: async params => {
         const amount = params.prepare.amount
         const id = params.prepare.destination.split('.').slice(-3)[0]
-
         let balance = this.buckets.get(id) || 0
         balance = Math.min(balance + Number(amount), this.maxBalance)
         this.buckets.set(id, balance)
@@ -82,44 +82,42 @@ class KoaWebMonetization {
     this.buckets.set(id, balance - price)
   }
 
-  async receive (ctx) {
-    await this.connect()
+  receive () {
+    return async (ctx, next) => {
+      await this.connect()
+      const re = pathToRegexp(this.receiverEndpointUrl)
+      const isMonetizer = re.exec(ctx.request.url)
+      if (ctx.get('Accept').indexOf('application/spsp+json') !== -1 && isMonetizer) {
+        const { destinationAccount, sharedSecret } =
+          this.receiver.generateAddressAndSecret()
 
-    if (ctx.get('Accept').indexOf('application/spsp+json') === -1) {
-      return ctx.throw(404)
-    }
+        const segments = destinationAccount.split('.')
+        const resultAccount = segments.slice(0, -2).join('.') +
+          '.' + isMonetizer[1] +
+          '.' + segments.slice(-2).join('.')
 
-    const { destinationAccount, sharedSecret } =
-      this.receiver.generateAddressAndSecret()
-
-    const segments = destinationAccount.split('.')
-    const resultAccount = segments.slice(0, -2).join('.') +
-      '.' + ctx.params.id +
-      '.' + segments.slice(-2).join('.')
-
-    ctx.set('Content-Type', 'application/spsp+json')
-    ctx.body = {
-      destination_account: resultAccount,
-      shared_secret: sharedSecret.toString('base64')
-    }
-  }
-}
-
-const WebMonetizationMiddleWare = (monetizer) => {
-  return async (ctx, next) => {
-    ;['awaitBalance', 'spend'].forEach(key => {
-      ctx.state[key] = (amount) => {
-        monetizer[key] = monetizer[key].bind(monetizer)
-        return monetizer[key](ctx.cookies.get(monetizer.cookieName), amount)
+        ctx.set('Content-Type', 'application/spsp+json')
+        ctx.body = {
+          destination_account: resultAccount,
+          shared_secret: sharedSecret.toString('base64')
+        }
       }
-      ctx.state[key] = ctx.state[key].bind(monetizer)
-    })
-    ctx.cookies.set(monetizer.cookieName, monetizer.generatePayerId(ctx), monetizer.cookieOptions)
-    return next()
+    }
+  }
+
+  mount () {
+    return async (ctx, next) => {
+      ;['awaitBalance', 'spend'].forEach(key => {
+        ctx.response[key] = ctx[key] = (amount) => {
+          return this[key](ctx.cookies.get(this.cookieName), amount)
+        }
+        ctx[key] = ctx[key].bind(this)
+      })
+      ctx.cookies.set(this.cookieName, this.generatePayerId(ctx), this.cookieOptions)
+      this.receive()(ctx, next)
+      return next()
+    }
   }
 }
 
-module.exports = {
-  WebMonetizationMiddleWare,
-  KoaWebMonetization
-}
+module.exports = KoaWebMonetization

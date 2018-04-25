@@ -21,7 +21,7 @@ to unlock exclusive content or paywalls.
 
 `koa-web-monetization` makes this easy by providing middleware for your
 [Koa](http://koajs.com/) application. Charging your users is as easy as putting
-`ctx.state.spend(100)` in your route handler. No need to convince them to
+`ctx.spend(100)` in your route handler. No need to convince them to
 buy a subscription or donate.
 
 ## Example Code
@@ -47,8 +47,8 @@ router.get(monetizer.receiverEndpointUrl, monetizer.receive.bind(monetizer))
 // for making sure that the call doesn't immediately fail when called on startup.
 router.get('/content/', async ctx => {
 
-  await ctx.state.awaitBalance(100)
-  ctx.state.spend(100)
+  await ctx.awaitBalance(100)
+  ctx.spend(100)
   // load content
 })
 
@@ -132,7 +132,7 @@ Create a new `KoaWebMonetization` instance.
 - `opts.maxBalance` - The maximum balance that can be associated with any user. Defaults to `Infinity`.
 - `opts.receiveEndpointUrl` - The endpoint in your Koa route configuration that specifies where a user pays streams PSK packets to your site. Defaults to `/__monetizer/{id}` where `{id}` is the server generated ID (stored in the browser as a cookie).
 - `opts.cookieName` - The cookie key name for your server generated payer ID. Defaults to `__monetizer`.
-- `opts.cookieOptions` - Cookie configurations for Koa. See [Koa ctx setting cookies options](http://koajs.com/) for more details! Only defaults are `httpOnly: false`
+- `opts.cookieOptions` - Cookie configurations for Koa. See [Koa ctx setting cookies options](http://koajs.com/) for more details! httpOnly has to be false for the monetizer to work!
 ### Receiver
 
 ```ts
@@ -163,15 +163,15 @@ This middleware allows cookies to be generated (or just sent if already set) fro
 
 ### Charging users
 
-The methods `ctx.state.spend()` and `ctx.state.awaitBalance()` are available to use inside handlers.
+The methods `ctx.spend()` and `ctx.awaitBalance()` are available to use inside handlers.
 
 ```ts
-ctx.state.spend(amount): Function
+ctx.spend(amount): Function
 ```
 Specifies how many units to charge the user.
 
 ```ts
-ctx.state.awaitBalance(amount): Function
+ctx.awaitBalance(amount): Function
 ```
 Waits until the user has sufficient balance to pay for specific content.
 `awaitBalance` can be useful for when a call is being done at page start.

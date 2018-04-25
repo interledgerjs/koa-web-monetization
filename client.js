@@ -1,12 +1,8 @@
 function MonetizerClient (opts) {
-  var domain = (opts && opts.url) || new URL(window.location).origin
-  this.url = domain
-  if (opts && opts.url) {
-    this.url = opts.url
-  }
+  this.url = (opts && opts.url) || window.location.origin
   this.cookieName = (opts && opts.cookieName) || '__monetizer'
-  this.receiverUrl = this.url + '/__monetizer/:id'
-
+  this.receiverEndpointUrl = (opts && opts.receiverEndpointUrl) || '/__monetizer/:id'
+  this.receiverUrl = this.url + this.receiverEndpointUrl
   const COOKIE_REGEX = new RegExp(this.cookieName + '=(.*?)(;|$)')
   this.getMonetizationId = function () {
     const match = document.cookie.match(COOKIE_REGEX)
@@ -37,7 +33,7 @@ function MonetizerClient (opts) {
         resolve(id)
       } else {
         console.log('Your extension is disabled or not installed.' +
-          ' Manually pay to ' + self.receiverUrl)
+          ' Manually pay to ' + this.receiverUrl)
         reject(new Error('web monetization is not enabled'))
       }
     })
