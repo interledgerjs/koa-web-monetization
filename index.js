@@ -4,6 +4,8 @@ const getIlpPlugin = require('ilp-plugin')
 const debug = require('debug')('koa-web-monetization')
 const { randomBytes } = require('crypto')
 const pathToRegexp = require('path-to-regexp')
+const fs = require('fs-extra')
+const path = require('path')
 
 class KoaWebMonetization {
   constructor (opts) {
@@ -117,6 +119,10 @@ class KoaWebMonetization {
       this.receive()(ctx, next)
       return next()
     }
+  }
+
+  serveClient () {
+    return fs.readFileSync(path.resolve(__dirname, 'client.js'))
   }
 }
 

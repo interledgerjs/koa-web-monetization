@@ -37,10 +37,6 @@ const compose = require('koa-compose')
 const router = require('koa-router')()
 const { WebMonetizationMiddleWare, KoaWebMonetization } = require('koa-web-monetization')
 const monetizer = new KoaWebMonetization()
-const EXPRESS_WEB_MONETIZATION_CLIENT_PATH =  path.resolve(path.dirname(require.resolve('koa-web-monetization')), 'client.js')
-// This is the SPSP endpoint that lets you receive ILP payments.  Money that
-// comes in is associated with the :id
-router.get(monetizer.receiverEndpointUrl, monetizer.receive.bind(monetizer))
 
 // This endpoint charges 100 units to the user with :id
 // If awaitBalance is set to true, the call will stay open until the balance is sufficient. This is convenient
@@ -56,11 +52,11 @@ router.get('/', async ctx => {
   // load index page
 })
 
-router.get('/scripts/client.js', async ctx => {
-  ctx.body = await fs.readFile(path.join(__dirname, EXPRESS_WEB_MONETIZATION_CLIENT_PATH);
+router.get('/client.js', async ctx => {
+  ctx.body = monetizer.serveClient()
 }
 app
-  .use(compose([WebMonetizationMiddleWare(monetizer), router.middleware()]))
+  .use(compose([monetizer.mount(), router.middleware()]))
   .use(router.routes())
   .use(router.allowedMethods())
   .listen(8080)
@@ -69,7 +65,7 @@ app
 The client side code to support this is very simple too:
 
 ```html
-<script src="/scripts/client.js"></script>
+<script src="/client.js"></script>
 <script>
   var monetizerClient = new MonetizerClient();
   monetizerClient.start()
@@ -152,7 +148,7 @@ Creates a new `MonetizerClient` instance.
 
 - `opts.url` - The url of the server that is registering the KoaWebMonetization plugin. Defaults to `new URL(window.location).origin`
 - `opts.cookieName` - The cookie key name that will be saved in your browser. Defaults to `__monetizer`. This MUST be the same has `opts.cookieName` in the server configuration.
-- `opts.receiverUrl` - The endpoint where users of the site can start streaming packets via their browser extension or through the browser API. Defaults to `opts.url + '__monetizer/:id'` where id is the server generated payer ID. This MUST be the same has `opts.receiverEndpointUrl` in the server configuration.
+- `opts.receiveEndpointUrl` - The endpoint where users of the site can start streaming packets via their browser extension or through the browser API. Defaults to `opts.url + '__monetizer/:id'` where id is the server generated payer ID. This MUST be the same has `opts.receiverEndpointUrl` in the server configuration.
 
 ### Middleware for cookies
 

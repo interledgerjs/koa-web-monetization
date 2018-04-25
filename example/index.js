@@ -13,7 +13,7 @@ router.get('/', async ctx => {
 })
 
 router.get('/client.js', async ctx => {
-  ctx.body = await fs.readFile(path.resolve(__dirname, '../client.js'))
+  ctx.body = monetizer.serveClient()
 })
 
 router.get('/content/', async ctx => {
