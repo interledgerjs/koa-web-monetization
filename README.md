@@ -33,11 +33,11 @@ section.
 ```js
 const Koa = require('koa')
 const app = new Koa()
-
+const compose = require('koa-compose')
 const router = require('koa-router')()
 const { WebMonetizationMiddleWare, KoaWebMonetization } = require('koa-web-monetization')
 const monetizer = new KoaWebMonetization()
-const EXPRESS_WEB_MONETIZATION_CLIENT_PATH =  '/node_modules/express-web-monetization/client.js'
+const EXPRESS_WEB_MONETIZATION_CLIENT_PATH =  path.resolve(path.dirname(require.resolve('koa-web-monetization')), 'client.js')
 // This is the SPSP endpoint that lets you receive ILP payments.  Money that
 // comes in is associated with the :id
 router.get(monetizer.receiverEndpointUrl, monetizer.receive.bind(monetizer))
@@ -136,12 +136,12 @@ Create a new `KoaWebMonetization` instance.
 ### Receiver
 
 ```ts
-instance.receiver(): Function
+instance.receive(): Function
 ```
 
 Returns a Koa middleware for setting up Interledger payments with
 [SPSP](https://github.com/sharafian/ilp-protocol-spsp) (used in Web
-Monetization).
+Monetization). Needs to be bound to an initialised instance (as shown in example above).
 
 ### Client constructor options
 

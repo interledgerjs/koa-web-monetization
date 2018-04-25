@@ -1,5 +1,5 @@
 function MonetizerClient (opts) {
-  var domain = new URL(window.location).origin
+  var domain = (opts && opts.url) || new URL(window.location).origin
   this.url = domain
   if (opts && opts.url) {
     this.url = opts.url
@@ -11,15 +11,13 @@ function MonetizerClient (opts) {
   this.getMonetizationId = function () {
     const match = document.cookie.match(COOKIE_REGEX)
     if (!match) {
-      return null
+      throw new Error('No match found for cookie!')
     }
 
     return match[1]
   }
 
   this.start = function () {
-    var self = this
-
     const id = this.getMonetizationId()
 
     return new Promise((resolve, reject) => {
@@ -31,7 +29,7 @@ function MonetizerClient (opts) {
         return
       }
 
-      const receiverUrl = self.receiverUrl.replace(':id', id)
+      const receiverUrl = this.receiverUrl.replace(':id', id)
       if (window.monetize) {
         window.monetize({
           receiver: receiverUrl
