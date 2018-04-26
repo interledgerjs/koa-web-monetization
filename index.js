@@ -84,45 +84,41 @@ class KoaWebMonetization {
     this.buckets.set(id, balance - price)
   }
 
-  receive () {
-    return async (ctx, next) => {
-      await this.connect()
-      const re = pathToRegexp(this.receiverEndpointUrl)
-      const isMonetizer = re.exec(ctx.request.url)
-      if (ctx.get('Accept').indexOf('application/spsp+json') !== -1 && isMonetizer) {
-        const { destinationAccount, sharedSecret } =
-          this.receiver.generateAddressAndSecret()
+  async receive (ctx, next) {
+    await this.connect()
+    const re = pathToRegexp(this.receiverEndpointUrl)
+    const isMonetizer = re.exec(ctx.request.url)
+    if (ctx.get('Accept').indexOf('application/spsp+json') !== -1 && isMonetizer) {
+      const { destinationAccount, sharedSecret } =
+        this.receiver.generateAddressAndSecret()
 
-        const segments = destinationAccount.split('.')
-        const resultAccount = segments.slice(0, -2).join('.') +
-          '.' + isMonetizer[1] +
-          '.' + segments.slice(-2).join('.')
+      const segments = destinationAccount.split('.')
+      const resultAccount = segments.slice(0, -2).join('.') +
+        '.' + isMonetizer[1] +
+        '.' + segments.slice(-2).join('.')
 
-        ctx.set('Content-Type', 'application/spsp+json')
-        ctx.body = {
-          destination_account: resultAccount,
-          shared_secret: sharedSecret.toString('base64')
-        }
+      ctx.set('Content-Type', 'application/spsp+json')
+      ctx.body = {
+        destination_account: resultAccount,
+        shared_secret: sharedSecret.toString('base64')
       }
     }
   }
 
   mount () {
     return async (ctx, next) => {
-      ;['awaitBalance', 'spend'].forEach(key => {
+      ['awaitBalance', 'spend'].forEach(key => {
         ctx.response[key] = ctx[key] = (amount) => {
           return this[key](ctx.cookies.get(this.cookieName), amount)
         }
-        ctx[key] = ctx[key].bind(this)
       })
       ctx.cookies.set(this.cookieName, this.generatePayerId(ctx), this.cookieOptions)
-      this.receive()(ctx, next)
+      this.receive(ctx, next)
+      if (ctx.request.url === '/client.js') {
+        ctx.body = await fs.readFile(path.resolve(__dirname, 'client.js'))
+      }
       return next()
     }
-  }
-
-  serveClient () {
-    return fs.readFileSync(path.resolve(__dirname, 'client.js'))
   }
 }
 

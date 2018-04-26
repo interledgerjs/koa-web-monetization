@@ -2,7 +2,6 @@ const path = require('path')
 const fs = require('fs-extra')
 const Koa = require('koa')
 const app = new Koa()
-const compose = require('koa-compose')
 const router = require('koa-router')()
 const KoaWebMonetization = require('..')
 const monetizer = new KoaWebMonetization()
@@ -12,10 +11,6 @@ router.get('/', async ctx => {
   ctx.body = fs.readFileSync(path.resolve(__dirname, 'index.html'))
 })
 
-router.get('/client.js', async ctx => {
-  ctx.body = monetizer.serveClient()
-})
-
 router.get('/content/', async ctx => {
   await ctx.awaitBalance(100)
   ctx.spend(100)
@@ -23,7 +18,7 @@ router.get('/content/', async ctx => {
 })
 
 app
-  .use(compose([monetizer.mount(), router.middleware()]))
+  .use(monetizer.mount())
   .use(router.routes())
   .use(router.allowedMethods())
   .listen(8080)

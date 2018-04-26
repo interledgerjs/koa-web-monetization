@@ -33,7 +33,6 @@ section.
 ```js
 const Koa = require('koa')
 const app = new Koa()
-const compose = require('koa-compose')
 const router = require('koa-router')()
 const KoaWebMonetization = require('koa-web-monetization')
 const monetizer = new KoaWebMonetization()
@@ -52,11 +51,8 @@ router.get('/', async ctx => {
   // load index page
 })
 
-router.get('/client.js', async ctx => {
-  ctx.body = monetizer.serveClient()
-}
 app
-  .use(compose([monetizer.mount(), router.middleware()]))
+  .use(compose(monetizer.mount())
   .use(router.routes())
   .use(router.allowedMethods())
   .listen(8080)
@@ -72,13 +68,13 @@ The client side code to support this is very simple too:
     <!-- Paid image will be appended here -->
   <img src="/content" width="600"/>
   </div>
-
+  <script src="/client.js"></script>
+  <script>
+    var monetizerClient = new MonetizerClient();
+    monetizerClient.start()
+  </script>
 </body>
-<script src="/client.js"></script>
-<script>
-  var monetizerClient = new MonetizerClient();
-  monetizerClient.start()
-</script>
+
 ```
 
 ## Try it out
@@ -138,7 +134,11 @@ Returns a Koa middleware for setting up Interledger payments with
 [SPSP](https://github.com/sharafian/ilp-protocol-spsp) (used in Web
 Monetization). Needs to be bound to an initialised instance (as shown in example above).
 
-### Client constructor options
+```ts
+instance.mount(): Function
+```
+This middleware allows cookies to be generated (or just sent if already set) from the server to the client. It also injects the `awaitBalance` and `spend` methods described below. It also serves the MonetizerClient below to the client side.
+
 
 ```ts
 new MonetizerClient(opts: Object | void): MonetizerClient
@@ -151,10 +151,7 @@ Creates a new `MonetizerClient` instance.
 
 ### Middleware for cookies
 
-```ts
-WebMonetizationMiddleWare(monetizer: KoaWebMonetization)
-```
-This middleware allows cookies to be generated (or just sent if already set) from the server to the client. It also injects the `awaitBalance` and `spend` methods described below.
+
 
 ### Charging users
 
