@@ -52,7 +52,7 @@ router.get('/', async ctx => {
 })
 
 app
-  .use(compose(monetizer.mount())
+  .use(monetizer.mount())
   .use(router.routes())
   .use(router.allowedMethods())
   .listen(8080)
