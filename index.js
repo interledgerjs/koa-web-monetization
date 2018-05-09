@@ -22,6 +22,7 @@ class KoaWebMonetization {
       this.cookieOptions = Object.assign(opts.cookieOptions, this.cookieOptions)
     }
     this.receiverEndpointUrl = (opts && opts.receiverEndpointUrl) || '/__monetizer/:id'
+    this.clientFilePath = (opts && opts.clientFilePath) || '/__monetizer/client.js'
   }
 
   generatePayerId (ctx) {
@@ -114,7 +115,7 @@ class KoaWebMonetization {
       })
       ctx.cookies.set(this.cookieName, this.generatePayerId(ctx), this.cookieOptions)
       this.receive(ctx, next)
-      if (ctx.request.url === '/__monetizer/client.js') {
+      if (ctx.request.url === this.clientFilePath) {
         ctx.body = await fs.readFile(path.resolve(__dirname, 'client.js'))
       }
       return next()

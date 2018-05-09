@@ -122,6 +122,7 @@ Create a new `KoaWebMonetization` instance.
 - `opts.plugin` - Supply an ILP plugin. Defaults to using Moneyd.
 - `opts.maxBalance` - The maximum balance that can be associated with any user. Defaults to `Infinity`.
 - `opts.receiveEndpointUrl` - The endpoint in your Koa route configuration that specifies where a user pays streams PSK packets to your site. Defaults to `/__monetizer/{id}` where `{id}` is the server generated ID (stored in the browser as a cookie).
+- `opts.clientFilePath` - This sets the endpoint which specifies where you want to serve the MonetizerClient file to your frontend. Your html script source must match this.
 - `opts.cookieName` - The cookie key name for your server generated payer ID. Defaults to `__monetizer`.
 - `opts.cookieOptions` - Cookie configurations for Koa. See [Koa ctx setting cookies options](http://koajs.com/) for more details! httpOnly has to be false for the monetizer to work!
 ### Receiver
