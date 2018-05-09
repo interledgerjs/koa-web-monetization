@@ -114,7 +114,7 @@ class KoaWebMonetization {
       })
       ctx.cookies.set(this.cookieName, this.generatePayerId(ctx), this.cookieOptions)
       this.receive(ctx, next)
-      if (ctx.request.url === '/client.js') {
+      if (ctx.request.url === '/__monetizer/client.js') {
         ctx.body = await fs.readFile(path.resolve(__dirname, 'client.js'))
       }
       return next()

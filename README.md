@@ -127,14 +127,6 @@ Create a new `KoaWebMonetization` instance.
 ### Receiver
 
 ```ts
-instance.receive(): Function
-```
-
-Returns a Koa middleware for setting up Interledger payments with
-[SPSP](https://github.com/sharafian/ilp-protocol-spsp) (used in Web
-Monetization). Needs to be bound to an initialised instance (as shown in example above).
-
-```ts
 instance.mount(): Function
 ```
 This middleware allows cookies to be generated (or just sent if already set) from the server to the client. It also injects the `awaitBalance` and `spend` methods described below. It also serves the MonetizerClient below to the client side.
