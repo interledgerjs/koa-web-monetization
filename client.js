@@ -1,31 +1,28 @@
-function u8tohex (arr) {
-  var vals = [ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' ]
-  var ret = ''
-  for (var i = 0; i < arr.length; ++i) {
-    ret += vals[(arr[i] & 0xf0) / 0x10]
-    ret += vals[(arr[i] & 0x0f)]
+function MonetizerClient (opts) {
+  this.url = (opts && opts.url) || window.location.origin
+  this.cookieName = (opts && opts.cookieName) || '__monetizer'
+  this.receiverEndpointUrl = (opts && opts.receiverEndpointUrl) || '/__monetizer/:id'
+  this.receiverUrl = this.url + this.receiverEndpointUrl
+  const COOKIE_REGEX = new RegExp(this.cookieName + '=(.*?)(;|$)')
+  this.getMonetizationId = function () {
+    const match = document.cookie.match(COOKIE_REGEX)
+    if (!match) {
+      throw new Error('No match found for cookie!')
+    }
+
+    return match[1]
   }
-  return ret
-}
 
-function getMonetizationId (receiverUrl) {
-  return new Promise((resolve, reject) => {
-    window.addEventListener('load', function () {
-      var idBytes = new Uint8Array(16)
-      crypto.getRandomValues(idBytes)
-      var id = u8tohex(idBytes)
-      var receiver = receiverUrl.replace(/:id/, id)
-
-      if (window.monetize) {
-        window.monetize({
-          receiver
-        })
-        resolve(id)
-      } else {
-        console.log('Your extension is disabled or not installed.' +
-          ' Manually pay to ' + receiver)
-        reject(new Error('web monetization is not enabled'))
-      }
-    })
-  })
+  this.start = async function () {
+    const id = this.getMonetizationId()
+    const receiverUrl = this.receiverUrl.replace(':id', id)
+    if (window.monetize) {
+      window.monetize({
+        receiver: receiverUrl
+      })
+    } else {
+      console.log('Your extension is disabled or not installed.' +
+        ' Manually pay to ' + this.receiverUrl)
+    }
+  }
 }

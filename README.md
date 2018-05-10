@@ -21,7 +21,7 @@ to unlock exclusive content or paywalls.
 
 `koa-web-monetization` makes this easy by providing middleware for your
 [Koa](http://koajs.com/) application. Charging your users is as easy as putting
-`monetization.paid({ price: 100 })` in front of it. No need to convince them to
+`ctx.spend(100)` in your route handler. No need to convince them to
 buy a subscription or donate.
 
 ## Example Code
@@ -33,20 +33,18 @@ section.
 ```js
 const Koa = require('koa')
 const app = new Koa()
-
 const router = require('koa-router')()
-const WebMonetization = require('koa-web-monetization')
-const monetization = new WebMonetization()
-
-// This is the SPSP endpoint that lets you receive ILP payments.  Money that
-// comes in is associated with the :id
-router.get('/pay/:id', monetization.receiver())
+const KoaWebMonetization = require('koa-web-monetization')
+const monetizer = new KoaWebMonetization()
 
 // This endpoint charges 100 units to the user with :id
 // If awaitBalance is set to true, the call will stay open until the balance is sufficient. This is convenient
 // for making sure that the call doesn't immediately fail when called on startup.
-router.get('/content/:id/:content_id/', monetization.paid({ price: 100, awaitBalance: true }), async ctx => {
-  // load content by :content_id
+router.get('/content/', async ctx => {
+
+  await ctx.awaitBalance(100)
+  ctx.spend(100)
+  // load content
 })
 
 router.get('/', async ctx => {
@@ -54,6 +52,7 @@ router.get('/', async ctx => {
 })
 
 app
+  .use(monetizer.mount())
   .use(router.routes())
   .use(router.allowedMethods())
   .listen(8080)
@@ -62,18 +61,20 @@ app
 The client side code to support this is very simple too:
 
 ```html
-<script src="node_modules/koa-web-monetization/client.js"></script>
-<script>
-  getMonetizationId('http://localhost:8080/pay/:id')
-    .then(id => {
-      var img = document.createElement('img')
-      var container = document.getElementById('container')
+<body>
+  <h1>Hello World</h1>
+  <p>Underneath this is a paid image. It will load if you have web monetization on.</p>
+  <div id="container">
+    <!-- Paid image will be appended here -->
+  <img src="/content" width="600"/>
+  </div>
+  <script src="/client.js"></script>
+  <script>
+    var monetizerClient = new MonetizerClient();
+    monetizerClient.start()
+  </script>
+</body>
 
-      img.src = '/content/' + id
-      img.width = '600'
-      container.appendChild(img)
-    })
-</script>
 ```
 
 ## Try it out
@@ -112,6 +113,7 @@ the page.
 ### Constructor
 
 ```ts
+
 new KoaWebMonetization(opts: Object | void): KoaWebMonetization
 ```
 
@@ -119,34 +121,44 @@ Create a new `KoaWebMonetization` instance.
 
 - `opts.plugin` - Supply an ILP plugin. Defaults to using Moneyd.
 - `opts.maxBalance` - The maximum balance that can be associated with any user. Defaults to `Infinity`.
-
+- `opts.receiveEndpointUrl` - The endpoint in your Koa route configuration that specifies where a user pays streams PSK packets to your site. Defaults to `/__monetizer/{id}` where `{id}` is the server generated ID (stored in the browser as a cookie).
+- `opts.clientFilePath` - This sets the endpoint which specifies where you want to serve the MonetizerClient file to your frontend. Your html script source must match this.
+- `opts.cookieName` - The cookie key name for your server generated payer ID. Defaults to `__monetizer`.
+- `opts.cookieOptions` - Cookie configurations for Koa. See [Koa ctx setting cookies options](http://koajs.com/) for more details! httpOnly has to be false for the monetizer to work!
 ### Receiver
 
 ```ts
-instance.receiver(): Function
+instance.mount(): Function
 ```
+This middleware allows cookies to be generated (or just sent if already set) from the server to the client. It also injects the `awaitBalance` and `spend` methods described below. It also serves the MonetizerClient below to the client side.
 
-Returns a koa middleware for setting up Interledger payments with
-[SPSP](https://github.com/sharafian/ilp-protocol-spsp) (used in Web
-Monetization).
-
-The endpoint on which this is attached must contain `:id` in the path.
-
-### Paid
 
 ```ts
-instance.paid(opts: Object): Function
+new MonetizerClient(opts: Object | void): MonetizerClient
 ```
+Creates a new `MonetizerClient` instance.
 
-- `opts.price` - Function that takes koa `ctx` and returns price, or a number.
-  Specifies how many units to charge the user. Required.
-- `opts.awaitBalance` - Whether to make the HTTP call wait until the user has
-  sufficient balance. Defaults to `false`.
+- `opts.url` - The url of the server that is registering the KoaWebMonetization plugin. Defaults to `new URL(window.location).origin`
+- `opts.cookieName` - The cookie key name that will be saved in your browser. Defaults to `__monetizer`. This MUST be the same has `opts.cookieName` in the server configuration.
+- `opts.receiveEndpointUrl` - The endpoint where users of the site can start streaming packets via their browser extension or through the browser API. Defaults to `opts.url + '__monetizer/:id'` where id is the server generated payer ID. This MUST be the same has `opts.receiverEndpointUrl` in the server configuration.
 
-Returns a koa middleware that charges the user whose `:id` is in the path.  It
-is meant to be chained with other middlewares, as shown in the [example
-code](#example-code)
+### Middleware for cookies
 
+
+
+### Charging users
+
+The methods `ctx.spend()` and `ctx.awaitBalance()` are available to use inside handlers.
+
+```ts
+ctx.spend(amount): Function
+```
+Specifies how many units to charge the user.
+
+```ts
+ctx.awaitBalance(amount): Function
+```
+Waits until the user has sufficient balance to pay for specific content.
 `awaitBalance` can be useful for when a call is being done at page start.
 Rather than immediately failing because the user hasn't paid, the server will
 wait until the user has paid the specified price.

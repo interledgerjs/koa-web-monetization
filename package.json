@@ -23,6 +23,7 @@
   "dependencies": {
     "debug": "^3.1.0",
     "ilp-plugin": "^3.1.0",
-    "ilp-protocol-psk2": "^0.2.1"
+    "ilp-protocol-psk2": "^0.2.1",
+    "path-to-regexp": "^2.2.1"
   }
 }

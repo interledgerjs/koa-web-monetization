@@ -2,6 +2,10 @@ const { createReceiver } = require('ilp-protocol-psk2')
 const EventEmitter = require('events')
 const getIlpPlugin = require('ilp-plugin')
 const debug = require('debug')('koa-web-monetization')
+const { randomBytes } = require('crypto')
+const pathToRegexp = require('path-to-regexp')
+const fs = require('fs-extra')
+const path = require('path')
 
 class KoaWebMonetization {
   constructor (opts) {
@@ -10,12 +14,29 @@ class KoaWebMonetization {
     this.buckets = new Map()
     this.balanceEvents = new EventEmitter()
     this.maxBalance = (opts && opts.maxBalance) || Infinity
+    this.cookieName = (opts && opts.cookieName) || '__monetizer'
+    this.cookieOptions = {
+      httpOnly: false
+    }
+    if (opts && opts.cookieOptions) {
+      this.cookieOptions = Object.assign(opts.cookieOptions, this.cookieOptions)
+    }
+    this.receiverEndpointUrl = (opts && opts.receiverEndpointUrl) || '/__monetizer/:id'
+    this.clientFilePath = (opts && opts.clientFilePath) || '/__monetizer/client.js'
+  }
+
+  generatePayerId (ctx) {
+    // Check for cookie in request otherwise generate newId.
+    const cookie = ctx.cookies.get(this.cookieName)
+    if (cookie) {
+      return cookie
+    }
+    return randomBytes(16).toString('hex')
   }
 
   async connect () {
     if (this.connected) return
     this.connected = true
-
     await this.plugin.connect()
 
     this.receiver = await createReceiver({
@@ -23,7 +44,6 @@ class KoaWebMonetization {
       paymentHandler: async params => {
         const amount = params.prepare.amount
         const id = params.prepare.destination.split('.').slice(-3)[0]
-
         let balance = this.buckets.get(id) || 0
         balance = Math.min(balance + Number(amount), this.maxBalance)
         this.buckets.set(id, balance)
@@ -54,7 +74,6 @@ class KoaWebMonetization {
 
   spend (id, price) {
     const balance = this.buckets.get(id) || 0
-
     if (balance < price) {
       throw new Error('insufficient balance on id.' +
       ' id=' + id,
@@ -66,44 +85,17 @@ class KoaWebMonetization {
     this.buckets.set(id, balance - price)
   }
 
-  paid ({ price, awaitBalance = false }) {
-    return async (ctx, next) => {
-      const id = ctx.params.id
-      if (!id) {
-        return ctx.throw(400, 'ctx.params.id must be defined')
-      }
-
-      const _price = (typeof price === 'function')
-        ? Number(price(ctx))
-        : Number(price)
-
-      if (awaitBalance) {
-        await this.awaitBalance(id, _price)
-      }
-
-      try {
-        this.spend(id, _price)
-        return next()
-      } catch (e) {
-        return ctx.throw(402, e.message)
-      }
-    }
-  }
-
-  receiver () {
-    return async ctx => {
-      await this.connect()
-
-      if (ctx.get('Accept').indexOf('application/spsp+json') === -1) {
-        return ctx.throw(404)
-      }
-
+  async receive (ctx, next) {
+    await this.connect()
+    const re = pathToRegexp(this.receiverEndpointUrl)
+    const isMonetizer = re.exec(ctx.request.url)
+    if (ctx.get('Accept').indexOf('application/spsp+json') !== -1 && isMonetizer) {
       const { destinationAccount, sharedSecret } =
         this.receiver.generateAddressAndSecret()
 
       const segments = destinationAccount.split('.')
       const resultAccount = segments.slice(0, -2).join('.') +
-        '.' + ctx.params.id +
+        '.' + isMonetizer[1] +
         '.' + segments.slice(-2).join('.')
 
       ctx.set('Content-Type', 'application/spsp+json')
@@ -111,6 +103,22 @@ class KoaWebMonetization {
         destination_account: resultAccount,
         shared_secret: sharedSecret.toString('base64')
       }
+    }
+  }
+
+  mount () {
+    return async (ctx, next) => {
+      ['awaitBalance', 'spend'].forEach(key => {
+        ctx.response[key] = ctx[key] = (amount) => {
+          return this[key](ctx.cookies.get(this.cookieName), amount)
+        }
+      })
+      ctx.cookies.set(this.cookieName, this.generatePayerId(ctx), this.cookieOptions)
+      this.receive(ctx, next)
+      if (ctx.request.url === this.clientFilePath) {
+        ctx.body = await fs.readFile(path.resolve(__dirname, 'client.js'))
+      }
+      return next()
     }
   }
 }
