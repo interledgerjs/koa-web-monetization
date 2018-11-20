@@ -1,3 +1,6 @@
+# DEPRECATED
+This module has been deprecated in favor of [web-monetization-receiver](https://github.com/interledgerjs/web-monetization-receiver).
+
 # Koa Web Monetization
 > Charge for resources and API calls with web monetization
 
